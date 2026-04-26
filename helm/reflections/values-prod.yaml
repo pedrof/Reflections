@@ -20,6 +20,10 @@ frontend:
 postgres:
   enabled: true
   existingSecret: "reflections-secrets"
+  image:
+    registry: ""   # empty = use Docker Hub, not the private Gitea registry
+    name: postgres
+    tag: "15-alpine"
   storage:
     size: 5Gi
     storageClassName: longhorn
