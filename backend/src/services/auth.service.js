@@ -100,22 +100,22 @@ export async function handleOidcCallback(callbackUrl, expectedState, codeVerifie
   };
 }
 
-export async function findOrCreateOidcUser(tenantId, { sub, email, name }) {
+export async function findOrCreateOidcUser(tenantId, { sub, email, name }, roles = ['employee']) {
   let user = await basePrisma.user.findFirst({
     where: { tenantId, externalId: sub },
   });
-  if (!user) {
-    user = await basePrisma.user.upsert({
-      where: { tenantId_email: { tenantId, email } },
-      update: { externalId: sub, isActive: true },
-      create: {
-        tenantId,
-        email,
-        name,
-        externalId: sub,
-        roles: ['employee'],
-      },
-    });
+  if (user) {
+    // Sync roles on every login so env var changes take effect immediately
+    const rolesChanged = roles.length !== user.roles.length || roles.some(r => !user.roles.includes(r));
+    if (rolesChanged) {
+      user = await basePrisma.user.update({ where: { id: user.id }, data: { roles } });
+    }
+    return user;
   }
+  user = await basePrisma.user.upsert({
+    where: { tenantId_email: { tenantId, email } },
+    update: { externalId: sub, isActive: true, roles },
+    create: { tenantId, email, name, externalId: sub, roles },
+  });
   return user;
 }

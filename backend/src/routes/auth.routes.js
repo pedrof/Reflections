@@ -84,6 +84,13 @@ router.get('/me', requireAuth, async (req, res, next) => {
 // OIDC mode
 const oidcSessions = new Map();
 
+const SUPER_ADMIN_EMAILS = new Set(
+  (process.env.SUPER_ADMIN_EMAILS || '')
+    .split(',')
+    .map(e => e.trim().toLowerCase())
+    .filter(Boolean)
+);
+
 router.get('/oidc/login', async (req, res, next) => {
   if (AUTH_MODE !== 'oidc') {
     return res.status(404).json({ error: 'OIDC not configured', code: 'WRONG_AUTH_MODE' });
@@ -113,11 +120,20 @@ router.get('/oidc/callback', async (req, res, next) => {
     const callbackUrl = `${process.env.OAUTH2_REDIRECT_URI}?${new URLSearchParams(req.query)}`;
     const claims = await handleOidcCallback(callbackUrl, state, session.codeVerifier);
 
-    // Use the first non-system tenant or let user pick — here we default to first active tenant
-    const tenants = await basePrisma.tenant.findMany({ where: { slug: { not: 'system' } } });
-    if (!tenants.length) throw new Error('No tenant available for OIDC login');
+    let tenantId, roles;
+    if (SUPER_ADMIN_EMAILS.has(claims.email.toLowerCase())) {
+      const systemTenant = await basePrisma.tenant.findUnique({ where: { slug: 'system' } });
+      if (!systemTenant) throw new Error('System tenant not found');
+      tenantId = systemTenant.id;
+      roles = ['super_admin'];
+    } else {
+      const tenants = await basePrisma.tenant.findMany({ where: { slug: { not: 'system' } } });
+      if (!tenants.length) throw new Error('No tenant available for OIDC login');
+      tenantId = tenants[0].id;
+      roles = ['employee'];
+    }
 
-    const user = await findOrCreateOidcUser(tenants[0].id, claims);
+    const user = await findOrCreateOidcUser(tenantId, claims, roles);
     const tokens = generateTokens(user);
     setAuthCookies(res, tokens);
     res.redirect(process.env.FRONTEND_URL || '/');
