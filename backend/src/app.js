@@ -48,6 +48,10 @@ app.use((err, req, res, _next) => {
     });
   }
   if (err.status) {
+    // Log 4xx errors from upstream services (AI proxy, etc.) so they're visible in pod logs
+    if (err.status >= 400 && err.status < 500) {
+      console.error(`[${err.status}] ${err.message}`, err.error ?? '');
+    }
     return res.status(err.status).json({ error: err.message, code: err.code || 'ERROR' });
   }
   console.error(err);

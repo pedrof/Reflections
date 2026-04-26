@@ -83,6 +83,7 @@ export default function AccomplishmentDetailPage() {
   const rewriteMut = useMutation({
     mutationFn: () => api.post(`/accomplishments/${id}/rewrite`),
     onSuccess: () => qc.invalidateQueries(['accomplishment', id]),
+    onError: () => {},
   });
 
   const recommendMut = useMutation({
@@ -94,6 +95,7 @@ export default function AccomplishmentDetailPage() {
         setSelectedElements(res.data.aiRecommendations.elementIds || []);
       }
     },
+    onError: () => {},
   });
 
   const updateMut = useMutation({
