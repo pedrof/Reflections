@@ -1,3 +1,7 @@
+image:
+  registry: "git.shadyknollcave.io/micro"
+  pullPolicy: IfNotPresent
+
 backend:
   replicaCount: 1
   existingSecret: "reflections-secrets"
