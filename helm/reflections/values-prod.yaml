@@ -1,0 +1,54 @@
+backend:
+  replicaCount: 1
+  existingSecret: "reflections-secrets"
+  env:
+    FRONTEND_URL: "https://reflections.shadyknollcave.io"
+    AI_BASE_URL: ""   # Set to your LiteLLM proxy URL once deployed
+    AI_MODEL: "claude-sonnet-4-6"
+    NODE_ENV: production
+    JWT_ACCESS_EXPIRY: 15m
+    JWT_REFRESH_EXPIRY: 7d
+    CHECKPOINT_DISABLE: "1"
+
+frontend:
+  replicaCount: 1
+
+postgres:
+  enabled: true
+  existingSecret: "reflections-secrets"
+  storage:
+    size: 5Gi
+    storageClassName: longhorn
+
+ingress:
+  enabled: true
+  className: cilium
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+  hosts:
+    - host: reflections.shadyknollcave.io
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: backend
+        - path: /
+          pathType: Prefix
+          service: frontend
+  tls:
+    - secretName: reflections-tls
+      hosts:
+        - reflections.shadyknollcave.io
+
+migrations:
+  enabled: true
+  backoffLimit: 3
+
+seed:
+  enabled: true
+
+autoscaling:
+  enabled: false
+
+namespace:
+  create: true
+  name: reflections
