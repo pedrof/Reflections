@@ -11,7 +11,7 @@ export async function rewriteAsSTAR(rawText) {
   const completion = await client.chat.completions.create({
     model,
     temperature: 0.4,
-    max_tokens: 1024,
+    max_completion_tokens: 1024,
     messages: [
       {
         role: 'system',
@@ -39,7 +39,7 @@ export async function recommendLinks(starText, objectives, elements) {
   const completion = await client.chat.completions.create({
     model,
     temperature: 0.2,
-    max_tokens: 512,
+    max_completion_tokens: 512,
     messages: [
       {
         role: 'system',
@@ -73,7 +73,7 @@ export async function generateWARNarrative(accomplishments, employeeName, startD
   const completion = await client.chat.completions.create({
     model,
     temperature: 0.3,
-    max_tokens: 768,
+    max_completion_tokens: 768,
     messages: [
       {
         role: 'system',
