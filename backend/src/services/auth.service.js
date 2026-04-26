@@ -28,19 +28,21 @@ export function setAuthCookies(res, { accessToken, refreshToken }) {
     httpOnly: true,
     secure,
     sameSite: 'lax',
+    path: '/',
     maxAge: 15 * 60 * 1000,
   });
   res.cookie('reflections_rt', refreshToken, {
     httpOnly: true,
     secure,
+    path: '/',
     sameSite: 'lax',
     maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 }
 
 export function clearAuthCookies(res) {
-  res.clearCookie('reflections_at');
-  res.clearCookie('reflections_rt');
+  res.clearCookie('reflections_at', { path: '/' });
+  res.clearCookie('reflections_rt', { path: '/' });
 }
 
 export async function loginWithPassword(email, password) {
