@@ -1,0 +1,21 @@
+image:
+  registry: registry.internal.example.com
+  pullPolicy: IfNotPresent
+  pullSecrets:
+    - name: registry-credentials
+
+postgres:
+  image:
+    name: registry.internal.example.com/postgres
+    tag: "15-alpine"
+
+ingress:
+  hosts:
+    - host: reflections.youragency.internal
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: backend
+        - path: /
+          pathType: Prefix
+          service: frontend

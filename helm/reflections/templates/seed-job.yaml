@@ -1,0 +1,30 @@
+{{- if .Values.seed.enabled }}
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: {{ include "reflections.fullname" . }}-seed
+  namespace: {{ .Values.namespace.name }}
+  annotations:
+    "helm.sh/hook": post-install
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  backoffLimit: 1
+  template:
+    spec:
+      restartPolicy: OnFailure
+      {{- with .Values.image.pullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: seed
+          image: {{ include "reflections.backendImage" . }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          command: ["node", "prisma/seed.js"]
+          envFrom:
+            - secretRef:
+                name: {{ include "reflections.secretName" . }}
+            - configMapRef:
+                name: {{ include "reflections.fullname" . }}-config
+{{- end }}

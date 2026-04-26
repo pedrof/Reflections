@@ -1,0 +1,15 @@
+export const reflectionsSayings = [
+  "What we do in service of others reflects who we are — and who we are becoming. Reflections helps you see yourself clearly, so others can too.",
+  "Your work tells a story. Reflections helps you tell it well.",
+  "Every accomplishment recorded is a testament to service — to your team, your agency, and your country.",
+  "A mirror shows your face. Your work shows your character. Reflections shows both.",
+  "The ripple of one person's excellence reaches shores they will never see. Record it anyway.",
+  "Marcus Aurelius wrote down what he did not to be remembered — but to remember who he was. What will your record say?",
+  "Service is not just a job. It is a covenant. Every entry here honors that covenant.",
+  "Your actions today are the legacy you leave tomorrow. Reflections helps you build it with intention.",
+  "Great nations are not built by great institutions alone — they are built by people who showed up, did the work, and refused to let it go unnoticed.",
+  "To reflect is to be honest — with yourself, your team, and the mission you serve. That honesty is a form of courage.",
+  "What you do when no one is watching defines you. What you record here ensures it is not forgotten.",
+  "The work of public servants is often invisible to the world. Reflections makes it visible — to those who matter most.",
+  "You are not just an employee. You are a steward of something larger than yourself. Reflect on that. Record that. Own that.",
+];

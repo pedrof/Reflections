@@ -1,0 +1,100 @@
+image:
+  registry: ""
+  pullPolicy: IfNotPresent
+  pullSecrets: []
+
+backend:
+  image:
+    name: reflections-backend
+    tag: latest
+  replicaCount: 2
+  port: 3001
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+  env:
+    NODE_ENV: production
+    JWT_ACCESS_EXPIRY: 15m
+    JWT_REFRESH_EXPIRY: 7d
+    FRONTEND_URL: ""
+    AI_BASE_URL: ""
+    AI_MODEL: "claude-sonnet-4-6"
+    CHECKPOINT_DISABLE: "1"
+  existingSecret: ""
+  secretKeys:
+    jwtSecret: JWT_SECRET
+    databaseUrl: DATABASE_URL
+    aiApiKey: AI_API_KEY
+    oauth2ClientId: OAUTH2_CLIENT_ID
+    oauth2ClientSecret: OAUTH2_CLIENT_SECRET
+    oauth2IssuerUrl: OAUTH2_ISSUER_URL
+    oauth2RedirectUri: OAUTH2_REDIRECT_URI
+
+frontend:
+  image:
+    name: reflections-frontend
+    tag: latest
+  replicaCount: 2
+  port: 80
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+postgres:
+  enabled: true
+  image:
+    name: postgres
+    tag: "15-alpine"
+  port: 5432
+  database: reflections
+  existingSecret: ""
+  storage:
+    size: 10Gi
+    storageClassName: ""
+  resources:
+    requests:
+      cpu: 250m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+ingress:
+  enabled: true
+  className: nginx
+  annotations: {}
+  hosts:
+    - host: reflections.internal.example.com
+      paths:
+        - path: /api
+          pathType: Prefix
+          service: backend
+        - path: /
+          pathType: Prefix
+          service: frontend
+  tls: []
+
+migrations:
+  enabled: true
+  backoffLimit: 3
+
+seed:
+  enabled: false
+
+autoscaling:
+  enabled: false
+  minReplicas: 2
+  maxReplicas: 6
+  targetCPUUtilizationPercentage: 70
+
+namespace:
+  create: true
+  name: reflections

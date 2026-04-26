@@ -1,0 +1,14 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "reflections.fullname" . }}-config
+  namespace: {{ .Values.namespace.name }}
+data:
+  NODE_ENV: {{ .Values.backend.env.NODE_ENV | quote }}
+  PORT: {{ .Values.backend.port | quote }}
+  JWT_ACCESS_EXPIRY: {{ .Values.backend.env.JWT_ACCESS_EXPIRY | quote }}
+  JWT_REFRESH_EXPIRY: {{ .Values.backend.env.JWT_REFRESH_EXPIRY | quote }}
+  FRONTEND_URL: {{ .Values.backend.env.FRONTEND_URL | quote }}
+  AI_BASE_URL: {{ .Values.backend.env.AI_BASE_URL | quote }}
+  AI_MODEL: {{ .Values.backend.env.AI_MODEL | quote }}
+  CHECKPOINT_DISABLE: {{ .Values.backend.env.CHECKPOINT_DISABLE | default "1" | quote }}

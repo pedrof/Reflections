@@ -1,0 +1,113 @@
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Tenant {
+  id              Int              @id @default(autoincrement())
+  name            String
+  slug            String           @unique
+  createdAt       DateTime         @default(now())
+  users           User[]
+  objectives      Objective[]
+  elements        Element[]
+  accomplishments Accomplishment[]
+}
+
+model User {
+  id             Int       @id @default(autoincrement())
+  tenantId       Int
+  tenant         Tenant    @relation(fields: [tenantId], references: [id])
+  email          String
+  name           String
+  hashedPassword String?
+  externalId     String?
+  roles          String[]
+  isActive       Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  objectives     Objective[]
+  elements       Element[]
+  accomplishments Accomplishment[]
+
+  @@unique([tenantId, email])
+}
+
+model Objective {
+  id              Int                      @id @default(autoincrement())
+  tenantId        Int
+  tenant          Tenant                   @relation(fields: [tenantId], references: [id])
+  userId          Int
+  user            User                     @relation(fields: [userId], references: [id])
+  title           String
+  description     String                   @db.Text
+  sortOrder       Int                      @default(0)
+  createdAt       DateTime                 @default(now())
+  updatedAt       DateTime                 @updatedAt
+  accomplishments AccomplishmentObjective[]
+}
+
+model Element {
+  id              Int                    @id @default(autoincrement())
+  tenantId        Int
+  tenant          Tenant                 @relation(fields: [tenantId], references: [id])
+  userId          Int
+  user            User                   @relation(fields: [userId], references: [id])
+  title           String
+  description     String                 @db.Text
+  sortOrder       Int                    @default(0)
+  createdAt       DateTime               @default(now())
+  updatedAt       DateTime               @updatedAt
+  accomplishments AccomplishmentElement[]
+}
+
+model Accomplishment {
+  id                   Int                      @id @default(autoincrement())
+  tenantId             Int
+  tenant               Tenant                   @relation(fields: [tenantId], references: [id])
+  userId               Int
+  user                 User                     @relation(fields: [userId], references: [id])
+  rawText              String                   @db.Text
+  starText             String?                  @db.Text
+  editedStarText       String?                  @db.Text
+  aiRecommendations    Json?
+  tags                 String[]
+  dateOfAccomplishment DateTime
+  fiscalYear           Int
+  period               FiscalPeriod
+  flaggedForComms      Boolean                  @default(false)
+  commsNote            String?
+  createdAt            DateTime                 @default(now())
+  updatedAt            DateTime                 @updatedAt
+  objectives           AccomplishmentObjective[]
+  elements             AccomplishmentElement[]
+}
+
+model AccomplishmentObjective {
+  accomplishmentId Int
+  objectiveId      Int
+  accomplishment   Accomplishment @relation(fields: [accomplishmentId], references: [id], onDelete: Cascade)
+  objective        Objective      @relation(fields: [objectiveId], references: [id], onDelete: Cascade)
+
+  @@id([accomplishmentId, objectiveId])
+}
+
+model AccomplishmentElement {
+  accomplishmentId Int
+  elementId        Int
+  accomplishment   Accomplishment @relation(fields: [accomplishmentId], references: [id], onDelete: Cascade)
+  element          Element        @relation(fields: [elementId], references: [id], onDelete: Cascade)
+
+  @@id([accomplishmentId, elementId])
+}
+
+enum FiscalPeriod {
+  Q1
+  Q2
+  Q3
+  Q4
+}

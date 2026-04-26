@@ -1,0 +1,13 @@
+{{- if .Values.postgres.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "reflections.fullname" . }}-postgres
+  namespace: {{ .Values.namespace.name }}
+spec:
+  selector:
+    app: {{ include "reflections.fullname" . }}-postgres
+  ports:
+    - port: {{ .Values.postgres.port }}
+      targetPort: {{ .Values.postgres.port }}
+{{- end }}
