@@ -1,6 +1,6 @@
 image:
   registry: "git.shadyknollcave.io/micro"
-  pullPolicy: IfNotPresent
+  pullPolicy: Always
 
 backend:
   replicaCount: 1
