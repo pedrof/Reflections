@@ -1,9 +1,11 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useAuthStore } from '../../store/auth.store.js';
 import { reflectionsSayings } from '../../constants/sayings.js';
 import api from '../../services/api.js';
 import Spinner from '../../components/ui/Spinner.jsx';
+
+const loginSaying = reflectionsSayings[Math.floor(Math.random() * reflectionsSayings.length)];
 
 export default function LoginPage() {
   const [mode, setMode] = useState(null);
@@ -15,7 +17,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = location.state?.from?.pathname || '/dashboard';
-  const saying = reflectionsSayings[Math.floor(Math.random() * reflectionsSayings.length)];
+  const saying = loginSaying;
 
   useEffect(() => {
     if (isAuthenticated) { navigate(from, { replace: true }); return; }

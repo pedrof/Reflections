@@ -1,7 +1,11 @@
+import { useMemo } from 'react';
 import { reflectionsSayings } from '../../constants/sayings.js';
 
 export default function EmptyState({ icon = '✦', title, description, action }) {
-  const saying = reflectionsSayings[Math.floor(Math.random() * reflectionsSayings.length)];
+  const saying = useMemo(
+    () => reflectionsSayings[Math.floor(Math.random() * reflectionsSayings.length)],
+    []
+  );
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center animate-fade-in">
       <div className="w-16 h-16 rounded-2xl bg-surface-700 flex items-center justify-center text-3xl mb-5 shadow-surface">
