@@ -18,8 +18,12 @@
 {{- include "reflections.image" (dict "Values" .Values "registry" .Values.frontend.image.registry "name" .Values.frontend.image.name "tag" .Values.frontend.image.tag) }}
 {{- end }}
 
+{{/* Postgres image never inherits the app registry — uses its own optional override */}}
 {{- define "reflections.postgresImage" -}}
-{{- include "reflections.image" (dict "Values" .Values "registry" .Values.postgres.image.registry "name" .Values.postgres.image.name "tag" .Values.postgres.image.tag) }}
+{{- $reg := .Values.postgres.image.registry | default "" -}}
+{{- $name := .Values.postgres.image.name -}}
+{{- $tag := .Values.postgres.image.tag -}}
+{{- if $reg }}{{ $reg }}/{{ $name }}:{{ $tag }}{{- else }}{{ $name }}:{{ $tag }}{{- end }}
 {{- end }}
 
 {{- define "reflections.secretName" -}}
