@@ -21,7 +21,7 @@ spec:
         - name: migrate
           image: {{ include "reflections.backendImage" . }}
           imagePullPolicy: {{ .Values.image.pullPolicy }}
-          command: ["npx", "prisma", "db", "push", "--accept-data-loss"]
+          command: ["npx", "prisma", "db", "push", "--force-reset"]
           envFrom:
             - secretRef:
                 name: {{ include "reflections.secretName" . }}
