@@ -44,6 +44,7 @@ export default function Sidebar() {
         <NavItem to="/dashboard" icon="⊞" label="Dashboard" end />
         <NavItem to="/accomplishments" icon="✦" label="Accomplishments" />
         <NavItem to="/war" icon="📋" label="Activity Report" />
+        <NavItem to="/reports/yearly" icon="📝" label="Yearly Report" />
 
         {hasRole('comms') && (
           <>

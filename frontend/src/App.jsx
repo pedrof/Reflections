@@ -18,6 +18,7 @@ import AccomplishmentsPage from './pages/accomplishments/AccomplishmentsPage.jsx
 import NewAccomplishmentPage from './pages/accomplishments/NewAccomplishmentPage.jsx';
 import AccomplishmentDetailPage from './pages/accomplishments/AccomplishmentDetailPage.jsx';
 import WARPage from './pages/war/WARPage.jsx';
+import YearlyReportPage from './pages/reports/YearlyReportPage.jsx';
 import CommsDashboardPage from './pages/comms/CommsDashboardPage.jsx';
 import CommsAccomplishmentsPage from './pages/comms/CommsAccomplishmentsPage.jsx';
 import CommsReportPage from './pages/comms/CommsReportPage.jsx';
@@ -73,6 +74,7 @@ export default function App() {
                 <Route path="/accomplishments/new" element={<NewAccomplishmentPage />} />
                 <Route path="/accomplishments/:id" element={<AccomplishmentDetailPage />} />
                 <Route path="/war" element={<WARPage />} />
+                <Route path="/reports/yearly" element={<YearlyReportPage />} />
 
                 <Route element={<RequireRole roles={['comms', 'supervisor', 'super_admin']} />}>
                   <Route path="/comms" element={<CommsDashboardPage />} />

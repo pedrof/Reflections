@@ -2,7 +2,8 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth, requireComms } from '../middleware/auth.middleware.js';
 import { attachScopedPrisma, basePrisma } from '../middleware/tenant.middleware.js';
-import { generateWARNarrative } from '../services/ai.service.js';
+import { generateWARNarrative, generateYearlyReport } from '../services/ai.service.js';
+import { getFiscalYearAndPeriod } from '../utils/fiscalYear.js';
 
 const router = Router();
 router.use(requireAuth, attachScopedPrisma);
@@ -116,6 +117,64 @@ router.post('/comms/preview', requireComms, async (req, res, next) => {
       groups: Object.values(grouped),
       total: accomplishments.length,
     });
+  } catch (err) { next(err); }
+});
+
+router.post('/yearly', async (req, res, next) => {
+  try {
+    const { fiscalYear } = z.object({
+      fiscalYear: z.number().int().optional(),
+    }).parse(req.body);
+
+    const fy = fiscalYear ?? getFiscalYearAndPeriod(new Date()).fiscalYear;
+
+    const user = await basePrisma.user.findUnique({
+      where: { id: req.user.userId },
+      select: { name: true },
+    });
+
+    const [objectives, elements, accomplishments] = await Promise.all([
+      basePrisma.objective.findMany({
+        where: { tenantId: req.user.tenantId, userId: req.user.userId },
+        orderBy: { sortOrder: 'asc' },
+      }),
+      basePrisma.element.findMany({
+        where: { tenantId: req.user.tenantId, userId: req.user.userId },
+        orderBy: { sortOrder: 'asc' },
+      }),
+      basePrisma.accomplishment.findMany({
+        where: { tenantId: req.user.tenantId, userId: req.user.userId, fiscalYear: fy },
+        include: {
+          objectives: { select: { objectiveId: true } },
+          elements: { select: { elementId: true } },
+        },
+        orderBy: { dateOfAccomplishment: 'asc' },
+      }),
+    ]);
+
+    if (!accomplishments.length) {
+      return res.status(400).json({ error: 'No accomplishments found for this fiscal year', code: 'NO_ACCOMPLISHMENTS' });
+    }
+
+    const lastName = user.name.trim().split(/\s+/).pop();
+
+    const objWithLinks = objectives.map((o) => ({
+      ...o,
+      linkedAccomplishmentIds: accomplishments
+        .filter((a) => a.objectives.some((ao) => ao.objectiveId === o.id))
+        .map((a) => a.id),
+    }));
+
+    const elWithLinks = elements.map((e) => ({
+      ...e,
+      linkedAccomplishmentIds: accomplishments
+        .filter((a) => a.elements.some((ae) => ae.elementId === e.id))
+        .map((a) => a.id),
+    }));
+
+    const report = await generateYearlyReport(objWithLinks, elWithLinks, accomplishments, lastName, fy);
+
+    res.json({ employee: user, fiscalYear: fy, ...report });
   } catch (err) { next(err); }
 });
 

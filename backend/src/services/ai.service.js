@@ -92,6 +92,78 @@ Do not include any text outside the JSON.`,
   return JSON.parse(raw);
 }
 
+export async function generateYearlyReport(objectives, elements, accomplishments, employeeName, fiscalYear) {
+  const accList = accomplishments
+    .map((a) => `[ID:${a.id}] ${a.editedStarText || a.starText || a.rawText}`)
+    .join('\n\n');
+
+  const objList = objectives
+    .map((o) => {
+      const linked = o.linkedAccomplishmentIds.length
+        ? o.linkedAccomplishmentIds.join(', ')
+        : 'none';
+      return `OBJ-${o.id}: ${o.title}\nDescription: ${o.description}\nLinked accomplishment IDs: ${linked}`;
+    })
+    .join('\n\n');
+
+  const elList = elements
+    .map((e) => {
+      const linked = e.linkedAccomplishmentIds.length
+        ? e.linkedAccomplishmentIds.join(', ')
+        : 'none';
+      return `EL-${e.id}: ${e.title}\nDescription: ${e.description}\nLinked accomplishment IDs: ${linked}`;
+    })
+    .join('\n\n');
+
+  const completion = await client.chat.completions.create({
+    model,
+    temperature: 0.4,
+    max_completion_tokens: 4096,
+    messages: [
+      {
+        role: 'system',
+        content: `You are a senior federal government HR specialist writing an annual performance appraisal narrative.
+Your task is to write professional, evaluative paragraphs for each Objective and each Performance Element.
+
+Rules:
+- Each paragraph must be 3–5 sentences, written in third person using the employee's last name (e.g. "Mr. Smith demonstrated..."), past tense, formal register.
+- Draw only from the accomplishments explicitly linked to each Objective or Element by ID.
+- Highlight measurable impact, leadership, and mission contribution.
+- Do not invent facts — only use what is in the accomplishments provided.
+- To avoid repetition: track which accomplishment IDs you cite in Objective paragraphs, then prefer unused accomplishments when writing Element paragraphs. If an accomplishment is the only one linked to an element, reuse it but rephrase it distinctly.
+- If an Objective or Element has no linked accomplishments, set its paragraph to null.
+
+Return ONLY valid JSON in this exact shape, no other text:
+{
+  "objectives": [
+    { "id": <number>, "title": "<string>", "paragraph": "<string or null>" }
+  ],
+  "elements": [
+    { "id": <number>, "title": "<string>", "paragraph": "<string or null>" }
+  ]
+}`,
+      },
+      {
+        role: 'user',
+        content: `Employee: ${employeeName}
+Fiscal Year: FY${fiscalYear}
+
+--- ACCOMPLISHMENTS ---
+${accList}
+
+--- OBJECTIVES ---
+${objList}
+
+--- PERFORMANCE ELEMENTS ---
+${elList}`,
+      },
+    ],
+  });
+
+  const raw = completion.choices[0].message.content.trim();
+  return JSON.parse(raw);
+}
+
 export async function generateWARNarrative(accomplishments, employeeName, startDate, endDate) {
   const entries = accomplishments
     .map((a, i) => `${i + 1}. ${a.editedStarText || a.starText || a.rawText}`)
