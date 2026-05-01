@@ -1,5 +1,7 @@
 import { useState } from 'react';
 import { useMutation } from '@tanstack/react-query';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } from 'docx';
+import { saveAs } from 'file-saver';
 import api from '../../services/api.js';
 import Spinner from '../../components/ui/Spinner.jsx';
 
@@ -76,6 +78,84 @@ function Section({ label, color, items, onUpdate }) {
   );
 }
 
+async function exportToWord(report) {
+  const children = [];
+
+  const heading = (text, level) =>
+    new Paragraph({ text, heading: level, spacing: { before: 240, after: 120 } });
+
+  const body = (text) =>
+    new Paragraph({
+      children: [new TextRun({ text, size: 24, font: 'Calibri' })],
+      spacing: { after: 160 },
+      alignment: AlignmentType.JUSTIFIED,
+    });
+
+  const divider = () =>
+    new Paragraph({
+      border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'CCCCCC' } },
+      spacing: { before: 80, after: 80 },
+    });
+
+  // Title block
+  children.push(
+    new Paragraph({
+      children: [new TextRun({ text: 'Annual Performance Report', bold: true, size: 36, font: 'Calibri' })],
+      heading: HeadingLevel.TITLE,
+      spacing: { after: 80 },
+    }),
+    new Paragraph({
+      children: [new TextRun({ text: `${report.employee?.name}  |  FY${report.fiscalYear}`, size: 24, color: '666666', font: 'Calibri' })],
+      spacing: { after: 320 },
+    }),
+    divider(),
+  );
+
+  // Objectives
+  const objWithParagraphs = report.objectives?.filter((o) => o.paragraph) ?? [];
+  if (objWithParagraphs.length) {
+    children.push(heading('Objectives', HeadingLevel.HEADING_1));
+    objWithParagraphs.forEach((o) => {
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ text: o.title, bold: true, size: 26, font: 'Calibri' })],
+          spacing: { before: 200, after: 80 },
+        }),
+        body(o.paragraph),
+      );
+    });
+    children.push(divider());
+  }
+
+  // Elements
+  const elWithParagraphs = report.elements?.filter((e) => e.paragraph) ?? [];
+  if (elWithParagraphs.length) {
+    children.push(heading('Performance Elements', HeadingLevel.HEADING_1));
+    elWithParagraphs.forEach((e) => {
+      children.push(
+        new Paragraph({
+          children: [new TextRun({ text: e.title, bold: true, size: 26, font: 'Calibri' })],
+          spacing: { before: 200, after: 80 },
+        }),
+        body(e.paragraph),
+      );
+    });
+  }
+
+  const doc = new Document({
+    styles: {
+      default: {
+        document: { run: { font: 'Calibri', size: 24 } },
+      },
+    },
+    sections: [{ properties: {}, children }],
+  });
+
+  const blob = await Packer.toBlob(doc);
+  const filename = `Yearly-Report-${report.employee?.name?.replace(/\s+/g, '-')}-FY${report.fiscalYear}.docx`;
+  saveAs(blob, filename);
+}
+
 function buildPlainText(report) {
   if (!report) return '';
   const lines = [`Annual Performance Report — ${report.employee?.name} — FY${report.fiscalYear}\n`];
@@ -98,6 +178,7 @@ export default function YearlyReportPage() {
   const [fiscalYear, setFiscalYear] = useState(currentFiscalYear());
   const [report, setReport] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [exporting, setExporting] = useState(false);
 
   const years = Array.from({ length: 5 }, (_, i) => currentFiscalYear() - i);
 
@@ -122,6 +203,11 @@ export default function YearlyReportPage() {
     navigator.clipboard.writeText(buildPlainText(report));
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleExportWord = async () => {
+    setExporting(true);
+    try { await exportToWord(report); } finally { setExporting(false); }
   };
 
   return (
@@ -174,8 +260,11 @@ export default function YearlyReportPage() {
               <button onClick={() => generateMut.mutate()} className="btn-secondary text-xs px-2 py-1" disabled={generateMut.isPending}>
                 {generateMut.isPending ? <Spinner size="sm" /> : '↺ Regenerate'}
               </button>
-              <button onClick={handleCopy} className="btn-primary text-xs px-3 py-1.5">
+              <button onClick={handleCopy} className="btn-secondary text-xs px-3 py-1.5">
                 {copied ? '✓ Copied' : '⎘ Copy text'}
+              </button>
+              <button onClick={handleExportWord} className="btn-primary text-xs px-3 py-1.5" disabled={exporting}>
+                {exporting ? <><Spinner size="sm" /><span>Exporting...</span></> : '⬇ Word (.docx)'}
               </button>
             </div>
           </div>
