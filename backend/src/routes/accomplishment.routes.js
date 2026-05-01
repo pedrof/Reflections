@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { z } from 'zod';
 import { requireAuth, requireSupervisor, requireComms } from '../middleware/auth.middleware.js';
 import { attachScopedPrisma, basePrisma } from '../middleware/tenant.middleware.js';
-import { rewriteAsSTAR, recommendLinks } from '../services/ai.service.js';
+import { rewriteAsSTAR, recommendLinks, generateClarifyingQuestions } from '../services/ai.service.js';
 import { getFiscalYearAndPeriod } from '../utils/fiscalYear.js';
 
 const router = Router();
@@ -151,6 +151,17 @@ router.delete('/:id', async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.post('/:id/clarify', async (req, res, next) => {
+  try {
+    const acc = await basePrisma.accomplishment.findFirst({
+      where: { id: Number(req.params.id), tenantId: req.user.tenantId, userId: req.user.userId },
+    });
+    if (!acc) return res.status(404).json({ error: 'Not found', code: 'NOT_FOUND' });
+    const result = await generateClarifyingQuestions(acc.rawText);
+    res.json(result);
+  } catch (err) { next(err); }
+});
+
 router.post('/:id/rewrite', async (req, res, next) => {
   try {
     const acc = await basePrisma.accomplishment.findFirst({
@@ -158,7 +169,8 @@ router.post('/:id/rewrite', async (req, res, next) => {
     });
     if (!acc) return res.status(404).json({ error: 'Not found', code: 'NOT_FOUND' });
 
-    const starText = await rewriteAsSTAR(acc.rawText);
+    const answers = Array.isArray(req.body.answers) ? req.body.answers : [];
+    const starText = await rewriteAsSTAR(acc.rawText, answers);
     const updated = await basePrisma.accomplishment.update({
       where: { id: acc.id },
       data: { starText },

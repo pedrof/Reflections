@@ -59,6 +59,8 @@ export default function AccomplishmentDetailPage() {
   const [editMode, setEditMode] = useState(false);
   const [selectedObjectives, setSelectedObjectives] = useState(null);
   const [selectedElements, setSelectedElements] = useState(null);
+  const [questions, setQuestions] = useState(null);
+  const [answers, setAnswers] = useState({});
 
   const { data: acc, isLoading } = useQuery({
     queryKey: ['accomplishment', id],
@@ -80,11 +82,25 @@ export default function AccomplishmentDetailPage() {
     queryFn: () => api.get('/elements').then((r) => r.data),
   });
 
+  const clarifyMut = useMutation({
+    mutationFn: () => api.post(`/accomplishments/${id}/clarify`).then((r) => r.data),
+    onSuccess: (data) => { setQuestions(data.questions); setAnswers({}); },
+  });
+
   const rewriteMut = useMutation({
-    mutationFn: () => api.post(`/accomplishments/${id}/rewrite`),
-    onSuccess: () => qc.invalidateQueries(['accomplishment', id]),
+    mutationFn: (answersPayload) => api.post(`/accomplishments/${id}/rewrite`, { answers: answersPayload }),
+    onSuccess: () => { qc.invalidateQueries(['accomplishment', id]); setQuestions(null); setAnswers({}); },
     onError: () => {},
   });
+
+  const startRewrite = () => clarifyMut.mutate();
+
+  const submitRewrite = () => {
+    const answersPayload = (questions || [])
+      .filter((q) => answers[q.id]?.trim())
+      .map((q) => ({ question: q.question, answer: answers[q.id].trim() }));
+    rewriteMut.mutate(answersPayload);
+  };
 
   const recommendMut = useMutation({
     mutationFn: () => api.post(`/accomplishments/${id}/recommend`),
@@ -157,14 +173,41 @@ export default function AccomplishmentDetailPage() {
           <h2 className="text-sm font-semibold text-white/70 uppercase tracking-wider">1 — Raw Entry</h2>
         </div>
         <p className="text-sm text-white/60 leading-relaxed">{acc.rawText}</p>
-        {!acc.starText && (
+        {!acc.starText && !questions && (
           <button
-            onClick={() => rewriteMut.mutate()}
+            onClick={startRewrite}
             className="btn-primary text-xs px-3 py-1.5"
-            disabled={rewriteMut.isPending}
+            disabled={clarifyMut.isPending}
           >
-            {rewriteMut.isPending ? <><Spinner size="sm" /><span>Rewriting...</span></> : '✨ Rewrite in STAR format'}
+            {clarifyMut.isPending ? <><Spinner size="sm" /><span>Analyzing...</span></> : '✨ Rewrite in STAR format'}
           </button>
+        )}
+        {questions && (
+          <div className="mt-4 space-y-4 border-t border-white/[0.06] pt-4">
+            <p className="text-xs text-white/50">Answer a few questions to improve the write-up. All optional — skip any you prefer not to answer.</p>
+            {questions.map((q) => (
+              <div key={q.id}>
+                <label className="label">{q.question}</label>
+                <textarea
+                  className="textarea-field"
+                  rows={2}
+                  placeholder="Leave blank to skip"
+                  value={answers[q.id] || ''}
+                  onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
+                />
+              </div>
+            ))}
+            <div className="flex gap-2">
+              <button onClick={() => { setQuestions(null); setAnswers({}); }} className="btn-secondary text-xs">Cancel</button>
+              <button
+                onClick={submitRewrite}
+                className="btn-primary text-xs px-3 py-1.5"
+                disabled={rewriteMut.isPending}
+              >
+                {rewriteMut.isPending ? <><Spinner size="sm" /><span>Generating...</span></> : '✨ Generate write-up'}
+              </button>
+            </div>
+          </div>
         )}
       </div>
 
@@ -174,14 +217,42 @@ export default function AccomplishmentDetailPage() {
           <div className="flex items-center justify-between">
             <h2 className="text-sm font-semibold text-emerald-400 uppercase tracking-wider">2 — AI STAR Rewrite</h2>
             <button
-              onClick={() => rewriteMut.mutate()}
+              onClick={startRewrite}
               className="btn-secondary text-xs px-2 py-1"
-              disabled={rewriteMut.isPending}
+              disabled={clarifyMut.isPending || rewriteMut.isPending}
             >
-              {rewriteMut.isPending ? <Spinner size="sm" /> : '↺ Regenerate'}
+              {clarifyMut.isPending ? <Spinner size="sm" /> : '↺ Regenerate'}
             </button>
           </div>
           <STARDisplay text={acc.starText} />
+
+          {questions && (
+            <div className="space-y-4 border-t border-white/[0.06] pt-4">
+              <p className="text-xs text-white/50">Answer a few questions to improve the write-up. All optional — skip any you prefer not to answer.</p>
+              {questions.map((q) => (
+                <div key={q.id}>
+                  <label className="label">{q.question}</label>
+                  <textarea
+                    className="textarea-field"
+                    rows={2}
+                    placeholder="Leave blank to skip"
+                    value={answers[q.id] || ''}
+                    onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
+                  />
+                </div>
+              ))}
+              <div className="flex gap-2">
+                <button onClick={() => { setQuestions(null); setAnswers({}); }} className="btn-secondary text-xs">Cancel</button>
+                <button
+                  onClick={submitRewrite}
+                  className="btn-primary text-xs px-3 py-1.5"
+                  disabled={rewriteMut.isPending}
+                >
+                  {rewriteMut.isPending ? <><Spinner size="sm" /><span>Generating...</span></> : '✨ Generate write-up'}
+                </button>
+              </div>
+            </div>
+          )}
 
           {!editMode ? (
             <button onClick={() => { setEditMode(true); setEditedText(acc.editedStarText || acc.starText); }} className="btn-secondary text-xs px-3 py-1.5">

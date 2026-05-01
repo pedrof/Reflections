@@ -7,7 +7,33 @@ const client = new OpenAI({
 
 const model = process.env.AI_MODEL || 'claude-sonnet-4-6';
 
-export async function rewriteAsSTAR(rawText) {
+export async function generateClarifyingQuestions(rawText) {
+  const completion = await client.chat.completions.create({
+    model,
+    temperature: 0.3,
+    max_completion_tokens: 512,
+    messages: [
+      {
+        role: 'system',
+        content: `You are a federal government performance writing assistant reviewing a draft accomplishment.
+Identify 2 to 4 specific pieces of information that are missing or vague and that would meaningfully improve a professional performance appraisal write-up.
+Focus on: measurable results (numbers, percentages, timelines), specific context or challenge that prompted the work, the employee's distinct role versus their team's, and concrete actions taken.
+Do NOT ask about things already clearly stated.
+Return ONLY valid JSON in this exact shape, no other text:
+{ "questions": [{ "id": "q1", "question": "<short, specific question>" }, ...] }`,
+      },
+      { role: 'user', content: rawText },
+    ],
+  });
+  const raw = completion.choices[0].message.content.trim();
+  return JSON.parse(raw);
+}
+
+export async function rewriteAsSTAR(rawText, answers = []) {
+  const answersBlock = answers.length
+    ? `\n\nAdditional context provided by the employee:\n${answers.map((a) => `Q: ${a.question}\nA: ${a.answer}`).join('\n\n')}`
+    : '';
+
   const completion = await client.chat.completions.create({
     model,
     temperature: 0.4,
@@ -23,7 +49,7 @@ Be concise but impactful. Quantify results where the information is provided.
 Do not invent facts. Only expand and professionalize what is provided.
 Return only the narrative paragraph, no preamble or labels.`,
       },
-      { role: 'user', content: rawText },
+      { role: 'user', content: `${rawText}${answersBlock}` },
     ],
   });
   return completion.choices[0].message.content.trim();
