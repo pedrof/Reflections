@@ -224,6 +224,13 @@ export default function AccomplishmentDetailPage() {
               {clarifyMut.isPending ? <Spinner size="sm" /> : '↺ Regenerate'}
             </button>
           </div>
+          <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2.5">
+            <span className="text-amber-400 mt-0.5 shrink-0">⚠</span>
+            <p className="text-xs text-amber-200/70 leading-relaxed">
+              <span className="font-semibold text-amber-300">Review before using.</span> AI-generated content may contain inaccuracies. Verify all facts, figures, and details reflect your actual work before submitting this write-up.
+            </p>
+          </div>
+
           <STARDisplay text={acc.starText} />
 
           {questions && (
