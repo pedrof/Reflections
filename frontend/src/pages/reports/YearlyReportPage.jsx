@@ -2,8 +2,10 @@ import { useState, useEffect, useRef } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } from 'docx';
 import { saveAs } from 'file-saver';
+import { PDFDownloadLink } from '@react-pdf/renderer';
 import api from '../../services/api.js';
 import Spinner from '../../components/ui/Spinner.jsx';
+import YearlyReportDocument from '../../components/reports/YearlyReportDocument.jsx';
 
 function currentFiscalYear() {
   const now = new Date();
@@ -261,6 +263,13 @@ export default function YearlyReportPage() {
               <button onClick={handleCopy} className="btn-secondary text-xs px-3 py-1.5">
                 {copied ? '✓ Copied' : '⎘ Copy text'}
               </button>
+              <PDFDownloadLink
+                document={<YearlyReportDocument data={report} />}
+                fileName={`Yearly-Report-${report.employee?.name?.replace(/\s+/g, '-')}-FY${report.fiscalYear}.pdf`}
+                className="btn-secondary text-xs px-3 py-1.5"
+              >
+                {({ loading }) => loading ? 'Building PDF...' : '⬇ PDF'}
+              </PDFDownloadLink>
               <button onClick={handleExportWord} className="btn-primary text-xs px-3 py-1.5" disabled={exporting}>
                 {exporting ? <><Spinner size="sm" /><span>Exporting...</span></> : '⬇ Word (.docx)'}
               </button>

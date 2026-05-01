@@ -1,11 +1,73 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { PDFDownloadLink } from '@react-pdf/renderer';
+import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } from 'docx';
+import { saveAs } from 'file-saver';
 import api from '../../services/api.js';
 import Spinner from '../../components/ui/Spinner.jsx';
 import WARDocument from '../../components/reports/WARDocument.jsx';
 import CopyToEmailBlock from '../../components/reports/CopyToEmailBlock.jsx';
 import { useAuthStore } from '../../store/auth.store.js';
+
+async function exportWARToWord(data) {
+  const children = [];
+  const divider = () => new Paragraph({
+    border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'CCCCCC' } },
+    spacing: { before: 80, after: 80 },
+  });
+  const body = (text) => new Paragraph({
+    children: [new TextRun({ text, size: 24, font: 'Calibri' })],
+    spacing: { after: 160 },
+    alignment: AlignmentType.JUSTIFIED,
+  });
+
+  children.push(
+    new Paragraph({ children: [new TextRun({ text: 'Weekly Activity Report', bold: true, size: 36, font: 'Calibri' })], heading: HeadingLevel.TITLE, spacing: { after: 80 } }),
+    new Paragraph({ children: [new TextRun({ text: `${data.employee?.name}  |  ${data.startDate} – ${data.endDate}`, size: 24, color: '666666', font: 'Calibri' })], spacing: { after: 320 } }),
+    divider(),
+  );
+
+  if (data.narrative) {
+    children.push(
+      new Paragraph({ text: 'Summary', heading: HeadingLevel.HEADING_1, spacing: { before: 200, after: 100 } }),
+      body(data.narrative),
+      divider(),
+    );
+  }
+
+  if (data.accomplishments?.length) {
+    children.push(new Paragraph({ text: 'Accomplishments', heading: HeadingLevel.HEADING_1, spacing: { before: 200, after: 100 } }));
+    data.accomplishments.forEach((a, i) => {
+      const text = a.editedStarText || a.starText || a.rawText || '';
+      const date = new Date(a.dateOfAccomplishment).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+      children.push(
+        new Paragraph({ children: [new TextRun({ text: `#${i + 1} — ${date}`, bold: true, size: 22, font: 'Calibri', color: '6366f1' })], spacing: { before: 160, after: 60 } }),
+        body(text.replace(/\*\*(Situation|Task|Action|Result):\*\*/g, '$1: ')),
+      );
+    });
+  }
+
+  if (data.objectivesCovered?.length) {
+    children.push(divider(), new Paragraph({ text: 'Objectives Supported', heading: HeadingLevel.HEADING_1, spacing: { before: 200, after: 100 } }));
+    data.objectivesCovered.forEach((o) => children.push(
+      new Paragraph({ children: [new TextRun({ text: `• ${o.title}`, size: 24, font: 'Calibri' })], spacing: { after: 60 } }),
+    ));
+  }
+
+  if (data.elementsCovered?.length) {
+    children.push(divider(), new Paragraph({ text: 'Performance Elements Demonstrated', heading: HeadingLevel.HEADING_1, spacing: { before: 200, after: 100 } }));
+    data.elementsCovered.forEach((e) => children.push(
+      new Paragraph({ children: [new TextRun({ text: `• ${e.title}`, size: 24, font: 'Calibri' })], spacing: { after: 60 } }),
+    ));
+  }
+
+  const doc = new Document({
+    styles: { default: { document: { run: { font: 'Calibri', size: 24 } } } },
+    sections: [{ properties: {}, children }],
+  });
+  const blob = await Packer.toBlob(doc);
+  saveAs(blob, `WAR-${data.employee?.name?.replace(/\s+/g, '-')}-${data.startDate}.docx`);
+}
 
 function getWeekRange() {
   const now = new Date();
@@ -22,6 +84,7 @@ export default function WARPage() {
   const [endDate, setEndDate] = useState(defaultEnd);
   const [selected, setSelected] = useState([]);
   const [reportData, setReportData] = useState(null);
+  const [wordExporting, setWordExporting] = useState(false);
 
   const params = new URLSearchParams({ fiscalYear: '', period: '' });
 
@@ -127,10 +190,17 @@ export default function WARPage() {
                     <PDFDownloadLink
                       document={<WARDocument data={reportData} />}
                       fileName={`WAR-${user?.name?.replace(/\s+/g, '-')}-${startDate}.pdf`}
-                      className="btn-primary text-xs px-3 py-1.5"
+                      className="btn-secondary text-xs px-3 py-1.5"
                     >
-                      {({ loading }) => loading ? 'Building PDF...' : '⬇ Download PDF'}
+                      {({ loading }) => loading ? 'Building PDF...' : '⬇ PDF'}
                     </PDFDownloadLink>
+                    <button
+                      className="btn-primary text-xs px-3 py-1.5"
+                      disabled={wordExporting}
+                      onClick={async () => { setWordExporting(true); try { await exportWARToWord(reportData); } finally { setWordExporting(false); } }}
+                    >
+                      {wordExporting ? <><Spinner size="sm" /><span>Exporting...</span></> : '⬇ Word (.docx)'}
+                    </button>
                   </div>
                 </div>
 
