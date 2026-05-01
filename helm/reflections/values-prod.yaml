@@ -3,6 +3,8 @@ image:
   pullPolicy: Always
 
 backend:
+  image:
+    tag: "v0.1.0"
   replicaCount: 1
   existingSecret: "reflections-secrets"
   env:
@@ -15,6 +17,8 @@ backend:
     CHECKPOINT_DISABLE: "1"
 
 frontend:
+  image:
+    tag: "v0.1.0"
   replicaCount: 1
 
 postgres:
