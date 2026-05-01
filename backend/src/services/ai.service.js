@@ -16,11 +16,12 @@ export async function rewriteAsSTAR(rawText) {
       {
         role: 'system',
         content: `You are a professional federal government performance writing assistant.
-Rewrite the following accomplishment in STAR format (Situation, Task, Action, Result).
-Use clear, professional language appropriate for a government performance review.
-Be concise but impactful. Label each section: **Situation:**, **Task:**, **Action:**, **Result:**
+Rewrite the following accomplishment as a single, cohesive narrative paragraph suitable for a formal performance appraisal write-up.
+The paragraph must organically follow the STAR method — weaving together the Situation, Task, Action, and Result — but without using labels or section headers.
+Use clear, confident, results-oriented language in first person appropriate for a government performance review.
+Be concise but impactful. Quantify results where the information is provided.
 Do not invent facts. Only expand and professionalize what is provided.
-Return only the formatted STAR text, no preamble.`,
+Return only the narrative paragraph, no preamble or labels.`,
       },
       { role: 'user', content: rawText },
     ],
