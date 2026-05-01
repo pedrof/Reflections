@@ -17,6 +17,7 @@ model Tenant {
   objectives      Objective[]
   elements        Element[]
   accomplishments Accomplishment[]
+  yearlyReports   YearlyReport[]
 }
 
 model User {
@@ -33,6 +34,7 @@ model User {
   objectives     Objective[]
   elements       Element[]
   accomplishments Accomplishment[]
+  yearlyReports  YearlyReport[]
 
   @@unique([tenantId, email])
 }
@@ -103,6 +105,21 @@ model AccomplishmentElement {
   element          Element        @relation(fields: [elementId], references: [id], onDelete: Cascade)
 
   @@id([accomplishmentId, elementId])
+}
+
+model YearlyReport {
+  id         Int      @id @default(autoincrement())
+  tenantId   Int
+  tenant     Tenant   @relation(fields: [tenantId], references: [id])
+  userId     Int
+  user       User     @relation(fields: [userId], references: [id])
+  fiscalYear Int
+  objectives Json
+  elements   Json
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@unique([tenantId, userId, fiscalYear])
 }
 
 enum FiscalPeriod {

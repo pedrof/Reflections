@@ -120,6 +120,27 @@ router.post('/comms/preview', requireComms, async (req, res, next) => {
   } catch (err) { next(err); }
 });
 
+router.get('/yearly', async (req, res, next) => {
+  try {
+    const fy = req.query.fiscalYear
+      ? parseInt(req.query.fiscalYear, 10)
+      : getFiscalYearAndPeriod(new Date()).fiscalYear;
+
+    const saved = await basePrisma.yearlyReport.findUnique({
+      where: { tenantId_userId_fiscalYear: { tenantId: req.user.tenantId, userId: req.user.userId, fiscalYear: fy } },
+    });
+
+    if (!saved) return res.status(404).json({ error: 'No saved report', code: 'NOT_FOUND' });
+
+    const user = await basePrisma.user.findUnique({
+      where: { id: req.user.userId },
+      select: { name: true },
+    });
+
+    res.json({ employee: user, fiscalYear: fy, objectives: saved.objectives, elements: saved.elements, updatedAt: saved.updatedAt });
+  } catch (err) { next(err); }
+});
+
 router.post('/yearly', async (req, res, next) => {
   try {
     const { fiscalYear } = z.object({
@@ -174,7 +195,33 @@ router.post('/yearly', async (req, res, next) => {
 
     const report = await generateYearlyReport(objWithLinks, elWithLinks, accomplishments, lastName, fy);
 
-    res.json({ employee: user, fiscalYear: fy, ...report });
+    const saved = await basePrisma.yearlyReport.upsert({
+      where: { tenantId_userId_fiscalYear: { tenantId: req.user.tenantId, userId: req.user.userId, fiscalYear: fy } },
+      update: { objectives: report.objectives, elements: report.elements },
+      create: { tenantId: req.user.tenantId, userId: req.user.userId, fiscalYear: fy, objectives: report.objectives, elements: report.elements },
+    });
+
+    res.json({ employee: user, fiscalYear: fy, objectives: report.objectives, elements: report.elements, updatedAt: saved.updatedAt });
+  } catch (err) { next(err); }
+});
+
+router.patch('/yearly', async (req, res, next) => {
+  try {
+    const { fiscalYear, objectives, elements } = z.object({
+      fiscalYear: z.number().int(),
+      objectives: z.array(z.object({ id: z.number(), title: z.string(), paragraph: z.string().nullable() })).optional(),
+      elements: z.array(z.object({ id: z.number(), title: z.string(), paragraph: z.string().nullable() })).optional(),
+    }).parse(req.body);
+
+    const saved = await basePrisma.yearlyReport.update({
+      where: { tenantId_userId_fiscalYear: { tenantId: req.user.tenantId, userId: req.user.userId, fiscalYear } },
+      data: {
+        ...(objectives && { objectives }),
+        ...(elements && { elements }),
+      },
+    });
+
+    res.json({ updatedAt: saved.updatedAt });
   } catch (err) { next(err); }
 });
 

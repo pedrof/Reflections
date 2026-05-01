@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useMutation } from '@tanstack/react-query';
+import { useState, useEffect, useRef } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Document, Packer, Paragraph, TextRun, HeadingLevel, AlignmentType, BorderStyle } from 'docx';
 import { saveAs } from 'file-saver';
 import api from '../../services/api.js';
@@ -14,6 +14,8 @@ function EditableParagraph({ paragraph, onSave }) {
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(paragraph);
 
+  useEffect(() => { setDraft(paragraph); }, [paragraph]);
+
   if (editing) {
     return (
       <div className="space-y-2">
@@ -25,18 +27,8 @@ function EditableParagraph({ paragraph, onSave }) {
           autoFocus
         />
         <div className="flex gap-2">
-          <button
-            className="btn-secondary text-xs"
-            onClick={() => { setDraft(paragraph); setEditing(false); }}
-          >
-            Cancel
-          </button>
-          <button
-            className="btn-primary text-xs"
-            onClick={() => { onSave(draft); setEditing(false); }}
-          >
-            Save
-          </button>
+          <button className="btn-secondary text-xs" onClick={() => { setDraft(paragraph); setEditing(false); }}>Cancel</button>
+          <button className="btn-primary text-xs" onClick={() => { onSave(draft); setEditing(false); }}>Save</button>
         </div>
       </div>
     );
@@ -49,9 +41,7 @@ function EditableParagraph({ paragraph, onSave }) {
         onClick={() => { setDraft(paragraph); setEditing(true); }}
         className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity text-white/30 hover:text-white/70 text-xs p-0.5"
         title="Edit"
-      >
-        ✎
-      </button>
+      >✎</button>
     </div>
   );
 }
@@ -67,10 +57,7 @@ function Section({ label, color, items, onUpdate }) {
         item.paragraph ? (
           <div key={item.id} className="space-y-1.5">
             <div className="text-xs font-semibold text-white/80">{item.title}</div>
-            <EditableParagraph
-              paragraph={item.paragraph}
-              onSave={(text) => onUpdate(item.id, text)}
-            />
+            <EditableParagraph paragraph={item.paragraph} onSave={(text) => onUpdate(item.id, text)} />
           </div>
         ) : null
       )}
@@ -80,80 +67,53 @@ function Section({ label, color, items, onUpdate }) {
 
 async function exportToWord(report) {
   const children = [];
+  const heading = (text, level) => new Paragraph({ text, heading: level, spacing: { before: 240, after: 120 } });
+  const body = (text) => new Paragraph({
+    children: [new TextRun({ text, size: 24, font: 'Calibri' })],
+    spacing: { after: 160 },
+    alignment: AlignmentType.JUSTIFIED,
+  });
+  const divider = () => new Paragraph({
+    border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'CCCCCC' } },
+    spacing: { before: 80, after: 80 },
+  });
 
-  const heading = (text, level) =>
-    new Paragraph({ text, heading: level, spacing: { before: 240, after: 120 } });
-
-  const body = (text) =>
-    new Paragraph({
-      children: [new TextRun({ text, size: 24, font: 'Calibri' })],
-      spacing: { after: 160 },
-      alignment: AlignmentType.JUSTIFIED,
-    });
-
-  const divider = () =>
-    new Paragraph({
-      border: { bottom: { style: BorderStyle.SINGLE, size: 6, color: 'CCCCCC' } },
-      spacing: { before: 80, after: 80 },
-    });
-
-  // Title block
   children.push(
-    new Paragraph({
-      children: [new TextRun({ text: 'Annual Performance Report', bold: true, size: 36, font: 'Calibri' })],
-      heading: HeadingLevel.TITLE,
-      spacing: { after: 80 },
-    }),
-    new Paragraph({
-      children: [new TextRun({ text: `${report.employee?.name}  |  FY${report.fiscalYear}`, size: 24, color: '666666', font: 'Calibri' })],
-      spacing: { after: 320 },
-    }),
+    new Paragraph({ children: [new TextRun({ text: 'Annual Performance Report', bold: true, size: 36, font: 'Calibri' })], heading: HeadingLevel.TITLE, spacing: { after: 80 } }),
+    new Paragraph({ children: [new TextRun({ text: `${report.employee?.name}  |  FY${report.fiscalYear}`, size: 24, color: '666666', font: 'Calibri' })], spacing: { after: 320 } }),
     divider(),
   );
 
-  // Objectives
   const objWithParagraphs = report.objectives?.filter((o) => o.paragraph) ?? [];
   if (objWithParagraphs.length) {
     children.push(heading('Objectives', HeadingLevel.HEADING_1));
     objWithParagraphs.forEach((o) => {
       children.push(
-        new Paragraph({
-          children: [new TextRun({ text: o.title, bold: true, size: 26, font: 'Calibri' })],
-          spacing: { before: 200, after: 80 },
-        }),
+        new Paragraph({ children: [new TextRun({ text: o.title, bold: true, size: 26, font: 'Calibri' })], spacing: { before: 200, after: 80 } }),
         body(o.paragraph),
       );
     });
     children.push(divider());
   }
 
-  // Elements
   const elWithParagraphs = report.elements?.filter((e) => e.paragraph) ?? [];
   if (elWithParagraphs.length) {
     children.push(heading('Performance Elements', HeadingLevel.HEADING_1));
     elWithParagraphs.forEach((e) => {
       children.push(
-        new Paragraph({
-          children: [new TextRun({ text: e.title, bold: true, size: 26, font: 'Calibri' })],
-          spacing: { before: 200, after: 80 },
-        }),
+        new Paragraph({ children: [new TextRun({ text: e.title, bold: true, size: 26, font: 'Calibri' })], spacing: { before: 200, after: 80 } }),
         body(e.paragraph),
       );
     });
   }
 
   const doc = new Document({
-    styles: {
-      default: {
-        document: { run: { font: 'Calibri', size: 24 } },
-      },
-    },
+    styles: { default: { document: { run: { font: 'Calibri', size: 24 } } } },
     sections: [{ properties: {}, children }],
   });
 
   const blob = await Packer.toBlob(doc);
-  const filename = `Yearly-Report-${report.employee?.name?.replace(/\s+/g, '-')}-FY${report.fiscalYear}.docx`;
-  saveAs(blob, filename);
+  saveAs(blob, `Yearly-Report-${report.employee?.name?.replace(/\s+/g, '-')}-FY${report.fiscalYear}.docx`);
 }
 
 function buildPlainText(report) {
@@ -161,43 +121,76 @@ function buildPlainText(report) {
   const lines = [`Annual Performance Report — ${report.employee?.name} — FY${report.fiscalYear}\n`];
   if (report.objectives?.some((o) => o.paragraph)) {
     lines.push('OBJECTIVES\n');
-    report.objectives.forEach((o) => {
-      if (o.paragraph) lines.push(`${o.title}\n${o.paragraph}\n`);
-    });
+    report.objectives.forEach((o) => { if (o.paragraph) lines.push(`${o.title}\n${o.paragraph}\n`); });
   }
   if (report.elements?.some((e) => e.paragraph)) {
     lines.push('PERFORMANCE ELEMENTS\n');
-    report.elements.forEach((e) => {
-      if (e.paragraph) lines.push(`${e.title}\n${e.paragraph}\n`);
-    });
+    report.elements.forEach((e) => { if (e.paragraph) lines.push(`${e.title}\n${e.paragraph}\n`); });
   }
   return lines.join('\n');
 }
 
 export default function YearlyReportPage() {
+  const qc = useQueryClient();
   const [fiscalYear, setFiscalYear] = useState(currentFiscalYear());
   const [report, setReport] = useState(null);
   const [copied, setCopied] = useState(false);
   const [exporting, setExporting] = useState(false);
+  const [savedAt, setSavedAt] = useState(null);
+  const saveTimer = useRef(null);
 
   const years = Array.from({ length: 5 }, (_, i) => currentFiscalYear() - i);
 
-  const generateMut = useMutation({
-    mutationFn: () => api.post('/reports/yearly', { fiscalYear }).then((r) => r.data),
-    onSuccess: (data) => setReport(data),
+  // Load saved report when FY changes
+  const { isFetching } = useQuery({
+    queryKey: ['yearlyReport', fiscalYear],
+    queryFn: () => api.get(`/reports/yearly?fiscalYear=${fiscalYear}`).then((r) => r.data),
+    retry: false,
+    onSuccess: (data) => { setReport(data); setSavedAt(data.updatedAt); },
+    onError: () => { setReport(null); setSavedAt(null); },
   });
 
-  const updateObjective = (id, text) =>
-    setReport((r) => ({
-      ...r,
-      objectives: r.objectives.map((o) => o.id === id ? { ...o, paragraph: text } : o),
-    }));
+  const generateMut = useMutation({
+    mutationFn: () => api.post('/reports/yearly', { fiscalYear }).then((r) => r.data),
+    onSuccess: (data) => {
+      setReport(data);
+      setSavedAt(data.updatedAt);
+      qc.invalidateQueries(['yearlyReport', fiscalYear]);
+    },
+  });
 
-  const updateElement = (id, text) =>
-    setReport((r) => ({
-      ...r,
-      elements: r.elements.map((e) => e.id === id ? { ...e, paragraph: text } : e),
-    }));
+  const saveMut = useMutation({
+    mutationFn: (data) => api.patch('/reports/yearly', data).then((r) => r.data),
+    onSuccess: (data) => setSavedAt(data.updatedAt),
+  });
+
+  const scheduleSave = (nextReport) => {
+    clearTimeout(saveTimer.current);
+    saveTimer.current = setTimeout(() => {
+      saveMut.mutate({ fiscalYear, objectives: nextReport.objectives, elements: nextReport.elements });
+    }, 1000);
+  };
+
+  const updateObjective = (id, text) => {
+    setReport((r) => {
+      const next = { ...r, objectives: r.objectives.map((o) => o.id === id ? { ...o, paragraph: text } : o) };
+      scheduleSave(next);
+      return next;
+    });
+  };
+
+  const updateElement = (id, text) => {
+    setReport((r) => {
+      const next = { ...r, elements: r.elements.map((e) => e.id === id ? { ...e, paragraph: text } : e) };
+      scheduleSave(next);
+      return next;
+    });
+  };
+
+  const handleRegenerate = () => {
+    if (report && !window.confirm('Regenerate will replace your saved draft with a new AI version. Continue?')) return;
+    generateMut.mutate();
+  };
 
   const handleCopy = () => {
     navigator.clipboard.writeText(buildPlainText(report));
@@ -210,13 +203,16 @@ export default function YearlyReportPage() {
     try { await exportToWord(report); } finally { setExporting(false); }
   };
 
+  const formatSaved = (ts) => {
+    if (!ts) return null;
+    return new Date(ts).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' });
+  };
+
   return (
     <div className="max-w-3xl space-y-6 animate-fade-in">
       <div>
         <h1 className="page-title">Draft Yearly Report</h1>
-        <p className="text-white/50 text-sm mt-1">
-          AI-generated annual performance narrative by objective and element
-        </p>
+        <p className="text-white/50 text-sm mt-1">Annual performance narrative by objective and element — saved per fiscal year</p>
       </div>
 
       <div className="glass-card p-5 flex items-end gap-4">
@@ -225,22 +221,17 @@ export default function YearlyReportPage() {
           <select
             className="input-field w-36"
             value={fiscalYear}
-            onChange={(e) => { setFiscalYear(Number(e.target.value)); setReport(null); }}
+            onChange={(e) => { setFiscalYear(Number(e.target.value)); setReport(null); setSavedAt(null); }}
           >
-            {years.map((y) => (
-              <option key={y} value={y}>FY{y}</option>
-            ))}
+            {years.map((y) => <option key={y} value={y}>FY{y}</option>)}
           </select>
         </div>
-        <button
-          onClick={() => generateMut.mutate()}
-          className="btn-primary"
-          disabled={generateMut.isPending}
-        >
-          {generateMut.isPending
-            ? <><Spinner size="sm" /><span>Generating...</span></>
-            : '✨ Generate Report'}
-        </button>
+        {!report && !isFetching && (
+          <button onClick={() => generateMut.mutate()} className="btn-primary" disabled={generateMut.isPending}>
+            {generateMut.isPending ? <><Spinner size="sm" /><span>Generating...</span></> : '✨ Generate Report'}
+          </button>
+        )}
+        {isFetching && <Spinner size="sm" />}
       </div>
 
       {generateMut.isError && (
@@ -254,10 +245,17 @@ export default function YearlyReportPage() {
           <div className="flex items-center justify-between">
             <div>
               <div className="text-sm font-semibold text-white">{report.employee?.name}</div>
-              <div className="text-xs text-white/40">Annual Performance Narrative — FY{report.fiscalYear}</div>
+              <div className="flex items-center gap-2 mt-0.5">
+                <span className="text-xs text-white/40">Annual Performance Narrative — FY{report.fiscalYear}</span>
+                {savedAt && (
+                  <span className="text-xs text-emerald-400/60">
+                    {saveMut.isPending ? '· Saving...' : `· Saved ${formatSaved(savedAt)}`}
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex gap-2">
-              <button onClick={() => generateMut.mutate()} className="btn-secondary text-xs px-2 py-1" disabled={generateMut.isPending}>
+              <button onClick={handleRegenerate} className="btn-secondary text-xs px-2 py-1" disabled={generateMut.isPending}>
                 {generateMut.isPending ? <Spinner size="sm" /> : '↺ Regenerate'}
               </button>
               <button onClick={handleCopy} className="btn-secondary text-xs px-3 py-1.5">
@@ -272,7 +270,7 @@ export default function YearlyReportPage() {
           <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2.5">
             <span className="text-amber-400 mt-0.5 shrink-0">⚠</span>
             <p className="text-xs text-amber-200/70 leading-relaxed">
-              <span className="font-semibold text-amber-300">Review before submitting.</span> AI-generated content may contain inaccuracies. Hover over any paragraph and click ✎ to edit it directly.
+              <span className="font-semibold text-amber-300">Review before submitting.</span> AI-generated content may contain inaccuracies. Hover over any paragraph and click ✎ to edit — edits save automatically.
             </p>
           </div>
 
