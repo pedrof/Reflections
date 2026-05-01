@@ -93,6 +93,14 @@ Do not include any text outside the JSON.`,
 }
 
 export async function generateYearlyReport(objectives, elements, accomplishments, employeeName, fiscalYear) {
+  const RATING_LABELS = {
+    1: 'Unacceptable',
+    2: 'Minimally Successful',
+    3: 'Fully Successful',
+    4: 'Exceeds Fully Successful',
+    5: 'Outstanding',
+  };
+
   const accList = accomplishments
     .map((a) => `[ID:${a.id}] ${a.editedStarText || a.starText || a.rawText}`)
     .join('\n\n');
@@ -102,7 +110,10 @@ export async function generateYearlyReport(objectives, elements, accomplishments
       const linked = o.linkedAccomplishmentIds.length
         ? o.linkedAccomplishmentIds.join(', ')
         : 'none';
-      return `OBJ-${o.id}: ${o.title}\nDescription: ${o.description}\nLinked accomplishment IDs: ${linked}`;
+      const ratingLine = o.selfRating != null
+        ? `\nSelf-Rating: ${o.selfRating} — ${RATING_LABELS[o.selfRating]}`
+        : '';
+      return `OBJ-${o.id}: ${o.title}\nDescription: ${o.description}${ratingLine}\nLinked accomplishment IDs: ${linked}`;
     })
     .join('\n\n');
 
@@ -111,7 +122,10 @@ export async function generateYearlyReport(objectives, elements, accomplishments
       const linked = e.linkedAccomplishmentIds.length
         ? e.linkedAccomplishmentIds.join(', ')
         : 'none';
-      return `EL-${e.id}: ${e.title}\nDescription: ${e.description}\nLinked accomplishment IDs: ${linked}`;
+      const ratingLine = e.selfRating != null
+        ? `\nSelf-Rating: ${e.selfRating} — ${RATING_LABELS[e.selfRating]}`
+        : '';
+      return `EL-${e.id}: ${e.title}\nDescription: ${e.description}${ratingLine}\nLinked accomplishment IDs: ${linked}`;
     })
     .join('\n\n');
 
@@ -132,6 +146,13 @@ Rules:
 - Do not invent facts — only use what is in the accomplishments provided.
 - To avoid repetition: track which accomplishment IDs you cite in Objective paragraphs, then prefer unused accomplishments when writing Element paragraphs. If an accomplishment is the only one linked to an element, reuse it but rephrase it distinctly.
 - If an Objective or Element has no linked accomplishments, set its paragraph to null.
+- When a Self-Rating is provided, calibrate the paragraph tone using the DPMAP 5-level scale:
+    • 5 Outstanding: use language of exceptional, exemplary, significantly exceeded all standards.
+    • 4 Exceeds Fully Successful: exceeded expectations, demonstrated performance clearly beyond requirements, consistently surpassed.
+    • 3 Fully Successful: met the established standard, accomplished objectives as expected, effective performance.
+    • 2 Minimally Successful: use measured factual language; acknowledge partial achievement; omit superlatives.
+    • 1 Unacceptable: neutral factual language; do not overstate; reflect performance that did not meet the standard.
+    • No Self-Rating: write at Fully Successful baseline tone.
 
 Return ONLY valid JSON in this exact shape, no other text:
 {

@@ -10,6 +10,7 @@ const schema = z.object({
   title: z.string().min(1).max(200),
   description: z.string().min(1),
   sortOrder: z.number().int().default(0),
+  selfRating: z.number().int().min(1).max(5).nullable().optional(),
 });
 
 router.get('/', async (req, res, next) => {

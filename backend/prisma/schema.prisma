@@ -48,6 +48,7 @@ model Objective {
   title           String
   description     String                   @db.Text
   sortOrder       Int                      @default(0)
+  selfRating      Int?
   createdAt       DateTime                 @default(now())
   updatedAt       DateTime                 @updatedAt
   accomplishments AccomplishmentObjective[]
@@ -62,6 +63,7 @@ model Element {
   title           String
   description     String                 @db.Text
   sortOrder       Int                    @default(0)
+  selfRating      Int?
   createdAt       DateTime               @default(now())
   updatedAt       DateTime               @updatedAt
   accomplishments AccomplishmentElement[]

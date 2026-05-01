@@ -5,12 +5,21 @@ import Modal from '../../components/ui/Modal.jsx';
 import EmptyState from '../../components/ui/EmptyState.jsx';
 import { SkeletonCard } from '../../components/ui/Skeleton.jsx';
 
+const RATING_OPTIONS = [
+  [1, 'Unacceptable'],
+  [2, 'Minimally Successful'],
+  [3, 'Fully Successful'],
+  [4, 'Exceeds Fully Successful'],
+  [5, 'Outstanding'],
+];
+
 function ItemForm({ initial, onSave, onCancel }) {
   const [title, setTitle] = useState(initial?.title || '');
   const [description, setDescription] = useState(initial?.description || '');
+  const [selfRating, setSelfRating] = useState(initial?.selfRating ?? null);
 
   return (
-    <form onSubmit={(e) => { e.preventDefault(); onSave({ title, description }); }} className="space-y-4">
+    <form onSubmit={(e) => { e.preventDefault(); onSave({ title, description, selfRating }); }} className="space-y-4">
       <div>
         <label className="label">Title</label>
         <input className="input-field" value={title} onChange={(e) => setTitle(e.target.value)} required />
@@ -25,6 +34,32 @@ function ItemForm({ initial, onSave, onCancel }) {
           onChange={(e) => setDescription(e.target.value)}
           required
         />
+      </div>
+      <div>
+        <label className="label">
+          Self-Rating <span className="normal-case font-normal text-white/30">(optional — used to calibrate yearly report tone)</span>
+        </label>
+        <div className="flex flex-wrap gap-1.5 mt-1">
+          {RATING_OPTIONS.map(([val, lbl]) => (
+            <button
+              key={val}
+              type="button"
+              onClick={() => setSelfRating(selfRating === val ? null : val)}
+              className={`px-2.5 py-1 rounded-md text-xs font-medium border transition-colors ${
+                selfRating === val
+                  ? 'bg-indigo-500/20 border-indigo-500/50 text-indigo-300'
+                  : 'border-white/[0.08] text-white/40 hover:text-white/70 hover:border-white/20'
+              }`}
+            >
+              {val} — {lbl}
+            </button>
+          ))}
+          {selfRating !== null && (
+            <button type="button" onClick={() => setSelfRating(null)} className="text-xs text-white/25 hover:text-white/50 self-center ml-1">
+              clear
+            </button>
+          )}
+        </div>
       </div>
       <div className="flex gap-2 justify-end">
         <button type="button" onClick={onCancel} className="btn-secondary">Cancel</button>
@@ -46,6 +81,11 @@ function ItemList({ items, onEdit, onDelete, loading }) {
               <div className="flex items-center gap-2">
                 <span className="text-xs text-white/30 font-mono">{idx + 1}</span>
                 <h3 className="text-sm font-medium text-white">{item.title}</h3>
+                {item.selfRating != null && (
+                  <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-indigo-500/10 text-indigo-400 border border-indigo-500/20">
+                    {item.selfRating}★
+                  </span>
+                )}
               </div>
               <p className="text-xs text-white/50 mt-1.5 line-clamp-2">{item.description}</p>
             </div>
