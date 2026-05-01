@@ -190,7 +190,7 @@ export default function WARPage() {
                     <PDFDownloadLink
                       document={<WARDocument data={reportData} />}
                       fileName={`WAR-${user?.name?.replace(/\s+/g, '-')}-${startDate}.pdf`}
-                      className="btn-secondary text-xs px-3 py-1.5"
+                      className="btn-primary text-xs px-3 py-1.5"
                     >
                       {({ loading }) => loading ? 'Building PDF...' : '⬇ PDF'}
                     </PDFDownloadLink>

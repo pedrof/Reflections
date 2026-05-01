@@ -266,7 +266,7 @@ export default function YearlyReportPage() {
               <PDFDownloadLink
                 document={<YearlyReportDocument data={report} />}
                 fileName={`Yearly-Report-${report.employee?.name?.replace(/\s+/g, '-')}-FY${report.fiscalYear}.pdf`}
-                className="btn-secondary text-xs px-3 py-1.5"
+                className="btn-primary text-xs px-3 py-1.5"
               >
                 {({ loading }) => loading ? 'Building PDF...' : '⬇ PDF'}
               </PDFDownloadLink>
