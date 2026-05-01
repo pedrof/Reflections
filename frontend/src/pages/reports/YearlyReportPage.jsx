@@ -144,13 +144,16 @@ export default function YearlyReportPage() {
   const years = Array.from({ length: 5 }, (_, i) => currentFiscalYear() - i);
 
   // Load saved report when FY changes
-  const { isFetching } = useQuery({
+  const { data: savedReport, isFetching, error: fetchError } = useQuery({
     queryKey: ['yearlyReport', fiscalYear],
     queryFn: () => api.get(`/reports/yearly?fiscalYear=${fiscalYear}`).then((r) => r.data),
     retry: false,
-    onSuccess: (data) => { setReport(data); setSavedAt(data.updatedAt); },
-    onError: () => { setReport(null); setSavedAt(null); },
   });
+
+  useEffect(() => {
+    if (savedReport) { setReport(savedReport); setSavedAt(savedReport.updatedAt); }
+    if (fetchError) { setReport(null); setSavedAt(null); }
+  }, [savedReport, fetchError]);
 
   const generateMut = useMutation({
     mutationFn: () => api.post('/reports/yearly', { fiscalYear }).then((r) => r.data),
