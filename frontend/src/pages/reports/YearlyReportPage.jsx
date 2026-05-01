@@ -8,10 +8,56 @@ function currentFiscalYear() {
   return now.getMonth() >= 9 ? now.getFullYear() + 1 : now.getFullYear();
 }
 
-function Section({ label, color, items }) {
+function EditableParagraph({ paragraph, onSave }) {
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(paragraph);
+
+  if (editing) {
+    return (
+      <div className="space-y-2">
+        <textarea
+          className="textarea-field text-sm"
+          rows={5}
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          autoFocus
+        />
+        <div className="flex gap-2">
+          <button
+            className="btn-secondary text-xs"
+            onClick={() => { setDraft(paragraph); setEditing(false); }}
+          >
+            Cancel
+          </button>
+          <button
+            className="btn-primary text-xs"
+            onClick={() => { onSave(draft); setEditing(false); }}
+          >
+            Save
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="group relative">
+      <p className="text-sm text-white/70 leading-relaxed pr-8">{paragraph}</p>
+      <button
+        onClick={() => { setDraft(paragraph); setEditing(true); }}
+        className="absolute top-0 right-0 opacity-0 group-hover:opacity-100 transition-opacity text-white/30 hover:text-white/70 text-xs p-0.5"
+        title="Edit"
+      >
+        ✎
+      </button>
+    </div>
+  );
+}
+
+function Section({ label, color, items, onUpdate }) {
   if (!items?.length) return null;
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
       <div className={`text-[10px] font-semibold uppercase tracking-widest ${color} pb-1 border-b border-white/[0.06]`}>
         {label}
       </div>
@@ -19,7 +65,10 @@ function Section({ label, color, items }) {
         item.paragraph ? (
           <div key={item.id} className="space-y-1.5">
             <div className="text-xs font-semibold text-white/80">{item.title}</div>
-            <p className="text-sm text-white/70 leading-relaxed">{item.paragraph}</p>
+            <EditableParagraph
+              paragraph={item.paragraph}
+              onSave={(text) => onUpdate(item.id, text)}
+            />
           </div>
         ) : null
       )}
@@ -56,6 +105,18 @@ export default function YearlyReportPage() {
     mutationFn: () => api.post('/reports/yearly', { fiscalYear }).then((r) => r.data),
     onSuccess: (data) => setReport(data),
   });
+
+  const updateObjective = (id, text) =>
+    setReport((r) => ({
+      ...r,
+      objectives: r.objectives.map((o) => o.id === id ? { ...o, paragraph: text } : o),
+    }));
+
+  const updateElement = (id, text) =>
+    setReport((r) => ({
+      ...r,
+      elements: r.elements.map((e) => e.id === id ? { ...e, paragraph: text } : e),
+    }));
 
   const handleCopy = () => {
     navigator.clipboard.writeText(buildPlainText(report));
@@ -122,13 +183,13 @@ export default function YearlyReportPage() {
           <div className="flex items-start gap-2 bg-amber-500/10 border border-amber-500/20 rounded-lg px-3 py-2.5">
             <span className="text-amber-400 mt-0.5 shrink-0">⚠</span>
             <p className="text-xs text-amber-200/70 leading-relaxed">
-              <span className="font-semibold text-amber-300">Review before submitting.</span> AI-generated content may contain inaccuracies. Verify all facts and figures reflect actual work before using in a formal evaluation.
+              <span className="font-semibold text-amber-300">Review before submitting.</span> AI-generated content may contain inaccuracies. Hover over any paragraph and click ✎ to edit it directly.
             </p>
           </div>
 
           <div className="glass-card p-6 space-y-8">
-            <Section label="Objectives" color="text-indigo-400" items={report.objectives} />
-            <Section label="Performance Elements" color="text-emerald-400" items={report.elements} />
+            <Section label="Objectives" color="text-indigo-400" items={report.objectives} onUpdate={updateObjective} />
+            <Section label="Performance Elements" color="text-emerald-400" items={report.elements} onUpdate={updateElement} />
           </div>
         </div>
       )}
